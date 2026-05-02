@@ -1,0 +1,10 @@
+{
+  "algorithm": "FP-Growth style frequent itemset mining + association rules",
+  "transactions": 6036,
+  "frequent_itemsets": 560505,
+  "rules": 50000,
+  "min_rating": 4.0,
+  "min_support_count": 25,
+  "min_confidence": 0.12,
+  "max_itemset_size": 2
+}

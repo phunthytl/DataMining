@@ -1,0 +1,22 @@
+[
+  {
+    "cluster_id": 0,
+    "user_count": 779,
+    "rules_generated": 15000
+  },
+  {
+    "cluster_id": 1,
+    "user_count": 2496,
+    "rules_generated": 15000
+  },
+  {
+    "cluster_id": 2,
+    "user_count": 1360,
+    "rules_generated": 15000
+  },
+  {
+    "cluster_id": 3,
+    "user_count": 1403,
+    "rules_generated": 15000
+  }
+]

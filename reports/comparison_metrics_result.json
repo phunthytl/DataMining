@@ -1,0 +1,63 @@
+{
+    "num_users": 1000,
+    "without_penalty": {
+        "5": {
+            "Hit_Rate": 0.112,
+            "Precision": 0.023,
+            "Recall": 0.0575,
+            "Coverage_Percent": 13.958279680659283,
+            "Unique_Items_Recommended": 542
+        },
+        "10": {
+            "Hit_Rate": 0.17,
+            "Precision": 0.0181,
+            "Recall": 0.0905,
+            "Coverage_Percent": 16.791140870460982,
+            "Unique_Items_Recommended": 652
+        },
+        "15": {
+            "Hit_Rate": 0.216,
+            "Precision": 0.015666666666666666,
+            "Recall": 0.1175,
+            "Coverage_Percent": 18.72263713623487,
+            "Unique_Items_Recommended": 727
+        },
+        "20": {
+            "Hit_Rate": 0.248,
+            "Precision": 0.013699999999999999,
+            "Recall": 0.137,
+            "Coverage_Percent": 19.727015194437293,
+            "Unique_Items_Recommended": 766
+        }
+    },
+    "with_penalty": {
+        "5": {
+            "Hit_Rate": 0.109,
+            "Precision": 0.022200000000000004,
+            "Recall": 0.0555,
+            "Coverage_Percent": 14.627865052794231,
+            "Unique_Items_Recommended": 568
+        },
+        "10": {
+            "Hit_Rate": 0.155,
+            "Precision": 0.016700000000000003,
+            "Recall": 0.0835,
+            "Coverage_Percent": 17.486479526139583,
+            "Unique_Items_Recommended": 679
+        },
+        "15": {
+            "Hit_Rate": 0.206,
+            "Precision": 0.0148,
+            "Recall": 0.111,
+            "Coverage_Percent": 19.108936389389648,
+            "Unique_Items_Recommended": 742
+        },
+        "20": {
+            "Hit_Rate": 0.245,
+            "Precision": 0.01345,
+            "Recall": 0.1345,
+            "Coverage_Percent": 20.345093999484934,
+            "Unique_Items_Recommended": 790
+        }
+    }
+}

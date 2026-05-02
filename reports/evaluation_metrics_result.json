@@ -1,0 +1,33 @@
+{
+    "num_users_evaluated": 1000,
+    "metrics": {
+        "Top_5": {
+            "Hit_Rate": 0.109,
+            "Precision": 0.0222,
+            "Recall": 0.0555,
+            "Coverage_Percent": 14.63,
+            "Unique_Items_Recommended": 568
+        },
+        "Top_10": {
+            "Hit_Rate": 0.155,
+            "Precision": 0.0167,
+            "Recall": 0.0835,
+            "Coverage_Percent": 17.49,
+            "Unique_Items_Recommended": 679
+        },
+        "Top_15": {
+            "Hit_Rate": 0.206,
+            "Precision": 0.0148,
+            "Recall": 0.111,
+            "Coverage_Percent": 19.11,
+            "Unique_Items_Recommended": 742
+        },
+        "Top_20": {
+            "Hit_Rate": 0.245,
+            "Precision": 0.0134,
+            "Recall": 0.1345,
+            "Coverage_Percent": 20.35,
+            "Unique_Items_Recommended": 790
+        }
+    }
+}

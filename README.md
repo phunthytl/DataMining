@@ -1,47 +1,44 @@
-# Data Mining Movie Recommender - FP-Growth
+# Data Mining Movie Recommender - Cluster-Based FP-Growth (Backend/CLI Version)
 
-Project xây dựng hệ gợi ý phim bằng **luật khai phá kết hợp** theo hướng FP-Growth/frequent itemset mining.
+Project xây dựng hệ gợi ý phim nâng cao kết hợp giữa **Phân cụm (K-Means Clustering)** và **Luật kết hợp (FP-Growth)**. Đây là phiên bản Backend/CLI tập trung hoàn toàn vào xử lý mô hình, không chứa giao diện Web.
 
-## Ý tưởng
+## Ý tưởng & Kiến trúc
 
-- Mỗi user là một giao dịch gồm các phim user đã đánh giá cao (`rating >= 4`).
-- Khai phá các tập phim thường xuất hiện cùng nhau.
-- Sinh luật kết hợp dạng:
+- **Tiền xử lý (Data Cleaning)**: Làm sạch dữ liệu, xử lý missing values từ bộ dữ liệu MovieLens (xuất ra file `_clean.csv` để bảo toàn data gốc).
+- **Sinh dữ liệu & EDA**: Trích xuất danh sách phim thực sự yêu thích (`liked.csv`) dựa trên rating >= 4.0 và tự động vẽ các biểu đồ phân tích (EDA).
+- **Phân cụm người dùng (K-Means)**: Hệ thống gom nhóm người dùng thành 4 cụm (Clusters) dựa trên ma trận sở thích thể loại phim (Genres).
+- **Khai phá luật (FP-Growth)**: Huấn luyện độc lập 4 mô hình FP-Growth cho 4 cụm. Các luật sinh ra (vd: `Thích phim A => Thích phim B`) sẽ mang tính đặc trưng riêng cho từng nhóm đối tượng.
+- **Cơ chế Penalty Factor**: Áp dụng công thức phạt (Log-penalty) đối với các phim quá phổ biến (Popularity Bias) nhằm đa dạng hóa danh mục gợi ý.
+
+## Cấu trúc File chính
 
 ```text
-Nếu thích phim A => có khả năng thích phim B
+data_preprocessing.py           Làm sạch dữ liệu (ratings & movies)
+data_generation.py              Sinh dữ liệu User, file Liked và vẽ biểu đồ EDA
+model/train_cluster_fpgrowth.py Huấn luyện cụm K-Means và các tập luật FP-Growth
+model/evaluate_model.py         Kịch bản đo lường (Hit Rate, Precision, Recall, Coverage) & A/B Testing
+recommender.py                  Core Engine: Dự đoán cụm, query luật, tính điểm & penalty
+test_user.py                    CLI Tool để phân tích, debug quá trình gợi ý cho 1 User bất kỳ
 ```
 
-- Gợi ý phim dựa trên `confidence`, `lift` và `support` của luật.
+## Hướng dẫn chạy
 
-## Luồng web
-
-- User đăng nhập bằng User ID dataset hoặc tạo user mới.
-- User mới có thể chọn tối đa 3 phim yêu thích nhất.
-- Có thể skip nếu chưa muốn chọn.
-- Nếu có seed movies, hệ thống dùng luật kết hợp để gợi ý.
-- Nếu skip, hệ thống hiển thị phim phổ biến làm cold-start fallback.
-
-## Chạy project
-
+**Bước 1: Tiền xử lý & Sinh dữ liệu (Bắt buộc chạy lần đầu)**
 ```bash
-cd D:\Web\Data_Mining
-python model\train_fpgrowth.py
-python app.py
+python data_preprocessing.py
+python data_generation.py
 ```
 
-Mở:
-
-```text
-http://127.0.0.1:5000
+**Bước 2: Huấn luyện Mô hình**
+```bash
+python model/train_cluster_fpgrowth.py
 ```
 
-## File chính
+**Bước 3: Đánh giá & Phân tích**
+```bash
+# Xem báo cáo độ chính xác tổng quan và A/B Testing Penalty
+python model/evaluate_model.py
 
-```text
-model/train_fpgrowth.py   Train luật FP-Growth/association rules
-recommender.py            Logic gợi ý từ seed movies
-app.py                    Flask web demo
-templates/                Giao diện web
-static/style.css          CSS
+# Xem chi tiết mô phỏng gợi ý cho một User cụ thể
+python test_user.py --user 1
 ```

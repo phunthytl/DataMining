@@ -1,63 +1,63 @@
 {
-    "num_users": 1000,
+    "num_users": 5000,
     "without_penalty": {
         "5": {
-            "Hit_Rate": 0.112,
-            "Precision": 0.023,
-            "Recall": 0.0575,
-            "Coverage_Percent": 13.958279680659283,
-            "Unique_Items_Recommended": 542
+            "Hit_Rate": 0.1078,
+            "Precision": 0.02236,
+            "Recall": 0.0559,
+            "Coverage_Percent": 17.7440123615761,
+            "Unique_Items_Recommended": 689
         },
         "10": {
-            "Hit_Rate": 0.17,
-            "Precision": 0.0181,
-            "Recall": 0.0905,
-            "Coverage_Percent": 16.791140870460982,
-            "Unique_Items_Recommended": 652
+            "Hit_Rate": 0.164,
+            "Precision": 0.01746,
+            "Recall": 0.0873,
+            "Coverage_Percent": 20.03605459696111,
+            "Unique_Items_Recommended": 778
         },
         "15": {
-            "Hit_Rate": 0.216,
-            "Precision": 0.015666666666666666,
-            "Recall": 0.1175,
-            "Coverage_Percent": 18.72263713623487,
-            "Unique_Items_Recommended": 727
+            "Hit_Rate": 0.2024,
+            "Precision": 0.014653333333333332,
+            "Recall": 0.1099,
+            "Coverage_Percent": 21.55549832603657,
+            "Unique_Items_Recommended": 837
         },
         "20": {
-            "Hit_Rate": 0.248,
-            "Precision": 0.013699999999999999,
-            "Recall": 0.137,
-            "Coverage_Percent": 19.727015194437293,
-            "Unique_Items_Recommended": 766
+            "Hit_Rate": 0.2416,
+            "Precision": 0.013300000000000003,
+            "Recall": 0.133,
+            "Coverage_Percent": 22.276590265258818,
+            "Unique_Items_Recommended": 865
         }
     },
     "with_penalty": {
         "5": {
-            "Hit_Rate": 0.109,
-            "Precision": 0.022200000000000004,
-            "Recall": 0.0555,
-            "Coverage_Percent": 14.627865052794231,
-            "Unique_Items_Recommended": 568
+            "Hit_Rate": 0.1026,
+            "Precision": 0.021320000000000002,
+            "Recall": 0.0533,
+            "Coverage_Percent": 18.25907803244914,
+            "Unique_Items_Recommended": 709
         },
         "10": {
-            "Hit_Rate": 0.155,
-            "Precision": 0.016700000000000003,
-            "Recall": 0.0835,
-            "Coverage_Percent": 17.486479526139583,
-            "Unique_Items_Recommended": 679
+            "Hit_Rate": 0.1562,
+            "Precision": 0.0166,
+            "Recall": 0.083,
+            "Coverage_Percent": 20.731393252639712,
+            "Unique_Items_Recommended": 805
         },
         "15": {
-            "Hit_Rate": 0.206,
-            "Precision": 0.0148,
-            "Recall": 0.111,
-            "Coverage_Percent": 19.108936389389648,
-            "Unique_Items_Recommended": 742
+            "Hit_Rate": 0.2012,
+            "Precision": 0.01446666666666667,
+            "Recall": 0.1085,
+            "Coverage_Percent": 22.019057429822304,
+            "Unique_Items_Recommended": 855
         },
         "20": {
-            "Hit_Rate": 0.245,
-            "Precision": 0.01345,
-            "Recall": 0.1345,
-            "Coverage_Percent": 20.345093999484934,
-            "Unique_Items_Recommended": 790
+            "Hit_Rate": 0.2394,
+            "Precision": 0.0131,
+            "Recall": 0.131,
+            "Coverage_Percent": 22.894669070306463,
+            "Unique_Items_Recommended": 889
         }
     }
 }

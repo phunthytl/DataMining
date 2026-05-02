@@ -136,4 +136,4 @@ def compare_models(k_list: List[int] = [5, 10, 15, 20], num_users: int = 1000):
     print(f"\n[+] Đã lưu báo cáo so sánh chi tiết tại: {report_path}")
 
 if __name__ == "__main__":
-    compare_models(k_list=[5, 10, 15, 20], num_users=1000)
+    compare_models(k_list=[5, 10, 15, 20], num_users=5000)

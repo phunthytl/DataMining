@@ -1,0 +1,37 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Flask
+flask_app/__pycache__/
+instance/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# VSCode
+.vscode/
+
+# PyCharm
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Model artifacts (optional)
+# Nếu không muốn push model lớn lên git thì bỏ comment
+# model/*.joblib
+
+# Generated reports/images (optional)
+# reports/*.png
+# reports/*.json

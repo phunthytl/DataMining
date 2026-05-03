@@ -55,8 +55,15 @@
 }
 .toolbar::-webkit-scrollbar { display: none; }
 .filter-label { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
-.genre-filters { display: flex; gap: 0.5rem; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-.genre-filters::-webkit-scrollbar { display: none; }
+.genre-filters {
+  display: flex; gap: 0.5rem; flex-wrap: nowrap; overflow-x: auto;
+  scrollbar-width: thin; scrollbar-color: var(--gold) var(--surface2);
+  padding-bottom: 0.5rem;
+}
+.genre-filters::-webkit-scrollbar { height: 6px; }
+.genre-filters::-webkit-scrollbar-track { background: var(--surface2); border-radius: 4px; }
+.genre-filters::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 4px; }
+.genre-filters::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 .genre-btn {
   padding: 0.35rem 1rem; border-radius: 50px; font-size: 0.8rem;
   border: 1px solid var(--border); background: transparent;
@@ -66,22 +73,6 @@
 .genre-btn:hover { border-color: var(--gold); color: var(--text); }
 .genre-btn.active { background: var(--gold); border-color: var(--gold); color: #0a0a0f; font-weight: 500; }
 
-/* inline search box in toolbar */
-.toolbar-search {
-  margin-left: auto;
-  position: relative;
-  flex-shrink: 0;
-}
-.toolbar-search input {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 50px; padding: 0.4rem 1rem 0.4rem 2.2rem;
-  font-size: 0.82rem; color: var(--text);
-  font-family: 'DM Sans', sans-serif; outline: none;
-  transition: border-color var(--transition); width: 200px;
-}
-.toolbar-search input:focus { border-color: var(--gold); }
-.toolbar-search input::placeholder { color: var(--text-muted); }
-.toolbar-search .si { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); opacity: 0.4; font-size: 0.8rem; pointer-events: none; }
 .active-filter-tag {
   display: inline-flex; align-items: center; gap: 0.4rem;
   background: var(--gold-dim); border: 1px solid rgba(201,168,76,0.3);
@@ -209,7 +200,7 @@
 
 {% block nav_center %}
 <div class="search-wrap">
-  <span class="search-icon">🔍</span>
+  <i class="fas fa-search search-icon"></i>
   <input type="text" id="searchInput" placeholder="Tìm phim nhanh..." autocomplete="off" />
   <div class="search-dropdown" id="searchDropdown"></div>
 </div>
@@ -222,29 +213,40 @@
   <p class="hero-eyebrow">
     {% if is_personalized %}Dành riêng cho bạn{% else %}Phim nổi bật{% endif %}
   </p>
-  <h1 class="hero-title">Xin chào, {{ account }} 👋</h1>
+  <h1 class="hero-title">Xin chào, {{ account }} <i class="fas fa-hand-sparkles" style="color: var(--gold);"></i></h1>
   <p class="hero-sub">
     {% if is_personalized %}Gợi ý dựa trên lịch sử xem phim của bạn.
     {% else %}Khám phá toàn bộ kho phim bên dưới.{% endif %}
   </p>
   {% if cluster_id is not none %}
-  <div class="cluster-badge">⚡ Nhóm sở thích #{{ cluster_id }}</div>
+  <div class="cluster-badge"><i class="fas fa-bolt"></i> Nhóm sở thích #{{ cluster_id }}</div>
   {% endif %}
 </div>
 
 <!-- SECTION 1: GỢI Ý CÁ NHÂN HÓA -->
 {% if recs %}
 <div class="section">
-  <div class="section-header">
-    <span class="section-title">
-      {% if is_personalized %}🌟 Gợi ý dành cho bạn{% else %}🔥 Phổ biến nhất{% endif %}
-    </span>
-    <span class="section-count">{{ recs | length }} phim</span>
+  <div class="section-header" style="display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; align-items: baseline; gap: 0.75rem;">
+      <span class="section-title">
+        {% if is_personalized %}<i class="fas fa-star" style="color: var(--gold);"></i> Gợi ý dành cho bạn{% else %}<i class="fas fa-fire" style="color: var(--red);"></i> Phổ biến nhất{% endif %}
+      </span>
+      <span class="section-count">{{ recs | length }} phim</span>
+    </div>
+    
+    <div class="rec-limit-selector" style="display: flex; align-items: center; gap: 0.5rem;">
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Hiển thị:</span>
+      <select onchange="window.location.href='?rec_limit=' + this.value {% if selected_genre %}+ '&genre={{ selected_genre }}'{% endif %}{% if search_q %}+ '&q={{ search_q }}'{% endif %}{% if page > 1 %}+ '&page={{ page }}'{% endif %}" 
+              style="background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 0.2rem 0.5rem; font-size: 0.8rem; outline: none; cursor: pointer;">
+        <option value="8" {% if rec_limit == 8 %}selected{% endif %}>8 phim</option>
+        <option value="16" {% if rec_limit == 16 %}selected{% endif %}>16 phim</option>
+        <option value="24" {% if rec_limit == 24 %}selected{% endif %}>24 phim</option>
+      </select>
+    </div>
   </div>
   <div class="movie-grid">
     {% for movie in recs %}
-    <div class="movie-card" style="animation-delay: {{ loop.index0 * 0.04 }}s"
-         onclick="openModal({{ movie | tojson | safe }})">
+    <a href="/movie/{{ movie.movie_id }}" class="movie-card" style="animation-delay: {{ loop.index0 * 0.04 }}s">
       <div class="rec-badge">Gợi ý</div>
       {% if movie.poster_url %}
         <img class="movie-poster" src="{{ movie.poster_url }}" alt="{{ movie.title }}" loading="lazy"
@@ -254,14 +256,14 @@
         </div>
       {% else %}
         <div class="poster-placeholder">
-          <span class="poster-placeholder-icon">🎬</span>
+          <i class="fas fa-film poster-placeholder-icon"></i>
           <span class="poster-placeholder-initial">{{ movie.title[0] if movie.title else '?' }}</span>
         </div>
       {% endif %}
       <div class="movie-info">
         <div class="movie-title">{{ movie.title }}</div>
         <div class="movie-meta">
-          <span class="movie-rating">★ {{ "%.1f"|format(movie.avg_rating | float) }}</span>
+          <span class="movie-rating"><i class="fas fa-star" style="font-size: 0.8em; margin-right: 0.2rem;"></i> {{ "%.1f"|format(movie.avg_rating | float) }}</span>
           <span class="movie-genre">{{ (movie.genres or '') | replace('|',' · ') }}</span>
         </div>
         {% if movie.get('normalized_score', 0) > 0 %}
@@ -269,8 +271,16 @@
           <div class="score-fill" style="width: {{ [movie.normalized_score / 0.5 * 100, 100] | min | int }}%"></div>
         </div>
         {% endif %}
+        {% if is_personalized %}
+        <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 0.4rem; display: flex; flex-direction: column; gap: 0.2rem;">
+          <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Conf {{ "%.2f"|format(movie.confidence|default(0)) }} · Lift {{ "%.2f"|format(movie.lift|default(0)) }} · Supp {{ movie.support_count|default(0) }}</span>
+          {% if movie.get('score') %}
+          <span style="color: rgba(201,168,76,0.7); font-size: 0.65rem;">Raw Score: {{ "%.2f"|format(movie.score|default(0)) }}</span>
+          {% endif %}
+        </div>
+        {% endif %}
       </div>
-    </div>
+    </a>
     {% endfor %}
   </div>
 </div>
@@ -278,27 +288,22 @@
 {% endif %}
 
 <!-- SECTION 2: TẤT CẢ PHIM -->
-<!-- Toolbar: genre filter + inline search -->
+<!-- Toolbar: genre filter -->
 <div class="toolbar">
   <span class="filter-label">Thể loại:</span>
   <div class="genre-filters">
-    <a href="{{ url_for('home') }}{% if search_q %}?q={{ search_q }}{% endif %}"
+    <a href="{{ url_for('home') }}"
        class="genre-btn {% if not selected_genre %}active{% endif %}">Tất cả</a>
     {% for genre in genres %}
-    <a href="{{ url_for('home', genre=genre) }}{% if search_q %}&q={{ search_q }}{% endif %}"
+    <a href="{{ url_for('home', genre=genre) }}"
        class="genre-btn {% if selected_genre == genre %}active{% endif %}">{{ genre }}</a>
     {% endfor %}
   </div>
-  <form class="toolbar-search" method="GET" action="{{ url_for('home') }}">
-    {% if selected_genre %}<input type="hidden" name="genre" value="{{ selected_genre }}" />{% endif %}
-    <span class="si">🔍</span>
-    <input type="text" name="q" placeholder="Tìm theo tên..." value="{{ search_q }}" autocomplete="off" />
-  </form>
 </div>
 
 <div class="section">
   <div class="section-header">
-    <span class="section-title">🎬 Tất cả phim</span>
+    <span class="section-title"><i class="fas fa-film" style="margin-right: 0.4rem;"></i> Tất cả phim</span>
     <span class="section-count">
       {{ total }} phim{% if selected_genre %} · {{ selected_genre }}{% endif %}{% if search_q %} · "{{ search_q }}"{% endif %}
       &nbsp;·&nbsp; Trang {{ page }}/{{ total_pages }}
@@ -308,10 +313,9 @@
   {% if all_movies %}
   <div class="movie-grid" id="allMoviesGrid">
     {% for movie in all_movies %}
-    <div class="movie-card"
+    <a href="/movie/{{ movie.movie_id }}" class="movie-card"
          data-title="{{ movie.title | lower }}"
-         style="animation-delay: {{ [loop.index0 * 0.015, 0.6] | min }}s"
-         onclick="openModal({{ movie | tojson | safe }})">
+         style="animation-delay: {{ [loop.index0 * 0.015, 0.6] | min }}s">
       {% if movie.poster_url %}
         <img class="movie-poster" src="{{ movie.poster_url }}" alt="{{ movie.title }}" loading="lazy"
              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
@@ -320,23 +324,23 @@
         </div>
       {% else %}
         <div class="poster-placeholder">
-          <span class="poster-placeholder-icon">🎬</span>
+          <i class="fas fa-film poster-placeholder-icon"></i>
           <span class="poster-placeholder-initial">{{ movie.title[0] if movie.title else '?' }}</span>
         </div>
       {% endif %}
       <div class="movie-info">
         <div class="movie-title">{{ movie.title }}</div>
         <div class="movie-meta">
-          <span class="movie-rating">★ {{ "%.1f"|format(movie.avg_rating | float) }}</span>
+          <span class="movie-rating"><i class="fas fa-star" style="font-size: 0.8em; margin-right: 0.2rem;"></i> {{ "%.1f"|format(movie.avg_rating | float) }}</span>
           <span class="movie-genre">{{ (movie.genres or '') | replace('|',' · ') }}</span>
         </div>
       </div>
-    </div>
+    </a>
     {% endfor %}
   </div>
   {% else %}
   <div class="empty-state">
-    <div class="empty-state-icon">🎭</div>
+    <div class="empty-state-icon"><i class="fas fa-masks-theater"></i></div>
     <h3>Không tìm thấy phim nào</h3>
     <p style="margin-top:0.5rem;font-size:0.85rem">Thử chọn thể loại khác hoặc xóa bộ lọc.</p>
     <a href="{{ url_for('home') }}" style="display:inline-block;margin-top:1rem;color:var(--gold);font-size:0.85rem;">← Xem tất cả phim</a>
@@ -432,7 +436,7 @@ function openModal(movie) {
       <div class="modal-genres">${genres.map(g=>`<span class="modal-genre-tag">${g}</span>`).join('')}</div>
       <div class="modal-stats">
         <div class="modal-stat">
-          <span class="modal-stat-val">★ ${rating}</span>
+          <span class="modal-stat-val"><i class="fas fa-star" style="font-size: 0.85em; margin-right: 0.2rem;"></i> ${rating}</span>
           <span class="modal-stat-label">Đánh giá TB</span>
         </div>
         <div class="modal-stat">

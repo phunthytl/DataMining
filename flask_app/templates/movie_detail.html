@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}{{ movie.title }} — CineRec{% endblock %}
+
+{% block extra_styles %}
+.detail-hero {
+  position: relative;
+  padding: 4rem 2.5rem;
+  background: radial-gradient(ellipse at 80% 0%, rgba(201,168,76,0.1) 0%, transparent 70%);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 3rem;
+  align-items: flex-start;
+}
+@media (max-width: 768px) {
+  .detail-hero {
+    flex-direction: column;
+    padding: 2rem 1.5rem;
+    gap: 2rem;
+  }
+}
+.detail-poster-wrap {
+  flex-shrink: 0;
+  width: 300px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+  border: 1px solid var(--border);
+}
+@media (max-width: 768px) {
+  .detail-poster-wrap {
+    width: 220px;
+    margin: 0 auto;
+  }
+}
+.detail-poster {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  display: block;
+}
+.detail-poster-placeholder {
+  width: 100%;
+  aspect-ratio: 2/3;
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 5rem;
+  font-style: italic;
+  color: var(--gold);
+  opacity: 0.4;
+}
+.detail-info {
+  flex: 1;
+}
+.detail-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+.detail-year {
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+}
+.detail-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+}
+.detail-genre-tag {
+  font-size: 0.85rem;
+  padding: 0.4rem 1rem;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  background: var(--surface);
+}
+.detail-stats {
+  display: flex;
+  gap: 2.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.detail-stat-val {
+  color: var(--gold);
+  font-size: 1.5rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.detail-stat-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.detail-overview-title {
+  font-size: 1.1rem;
+  color: var(--text);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+.detail-overview {
+  font-size: 1rem;
+  color: var(--text-dim);
+  line-height: 1.8;
+  max-width: 800px;
+}
+.detail-actions {
+  margin-top: 2.5rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+{% endblock %}
+
+{% block content %}
+<div class="detail-hero">
+  <div class="detail-poster-wrap">
+    {% if movie.poster_url %}
+      <img class="detail-poster" src="{{ movie.poster_url }}" alt="{{ movie.title }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+      <div class="detail-poster-placeholder" style="display:none">{{ movie.title[0] if movie.title else '?' }}</div>
+    {% else %}
+      <div class="detail-poster-placeholder"><i class="fas fa-film"></i></div>
+    {% endif %}
+  </div>
+  
+  <div class="detail-info">
+    <h1 class="detail-title">
+      {{ movie.title }} 
+      {% if movie.year %}<span class="detail-year">({{ movie.year }})</span>{% endif %}
+    </h1>
+    
+    <div class="detail-genres">
+      {% for genre in (movie.genres or '').split('|') %}
+        {% if genre %}<span class="detail-genre-tag">{{ genre }}</span>{% endif %}
+      {% endfor %}
+    </div>
+    
+    <div class="detail-stats">
+      <div class="detail-stat">
+        <span class="detail-stat-val"><i class="fas fa-star" style="font-size: 0.85em; margin-right: 0.2rem;"></i> {{ "%.1f"|format(movie.avg_rating | float) if movie.avg_rating else "N/A" }}</span>
+        <span class="detail-stat-label">Đánh giá TB</span>
+      </div>
+      <div class="detail-stat">
+        <span class="detail-stat-val">{{ movie.num_ratings | default(0) | int }}</span>
+        <span class="detail-stat-label">Lượt đánh giá</span>
+      </div>
+      {% if movie.tmdb_rating %}
+      <div class="detail-stat">
+        <span class="detail-stat-val">{{ "%.1f"|format(movie.tmdb_rating | float) }}</span>
+        <span class="detail-stat-label">TMDB</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="detail-overview-title">Nội dung tóm tắt</div>
+    <div class="detail-overview">
+      {{ movie.overview if movie.overview else 'Chưa có thông tin mô tả cho bộ phim này.' }}
+    </div>
+    
+    <div class="detail-actions">
+      <a href="{{ url_for('home') }}" class="btn btn-outline">← Quay lại trang chủ</a>
+      <form method="POST" action="/favorite/add" style="display: inline;">
+        <input type="hidden" name="movie_id" value="{{ movie.movie_id }}">
+        <button type="submit" class="btn btn-gold">
+          <span style="font-size: 1.1rem; margin-right: 0.3rem;"><i class="fas fa-heart"></i></span> Thêm vào Yêu thích
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -119,23 +119,28 @@ def logout():
 @login_required
 def onboarding():
     movies = load_movies_df()
-    return render_template("onboarding.html", genres=get_all_genres(movies))
+    if "num_ratings" in movies.columns:
+        top_movies = movies.sort_values("num_ratings", ascending=False).head(200)
+    elif "liked_count" in movies.columns:
+        top_movies = movies.sort_values("liked_count", ascending=False).head(200)
+    else:
+        top_movies = movies.head(200)
+        
+    return render_template("onboarding.html", 
+                           genres=get_all_genres(movies), 
+                           top_movies=top_movies.to_dict("records"))
 
 
 @app.route("/onboarding/save", methods=["POST"])
 @login_required
 def save_onboarding():
-    data            = request.get_json()
-    selected_genres = data.get("genres", [])
-    user_id         = session["user_id"]
-    if selected_genres:
-        movies = load_movies_df()
-        def has_genre(g):
-            return bool(set(str(g).split("|")).intersection(selected_genres))
-        filtered = movies[movies["genres"].apply(has_genre)]
-        seed_ids = filtered.sort_values("avg_rating", ascending=False).head(20)["movie_id"].astype(int).tolist()[:10]
+    data = request.get_json()
+    selected_movies = data.get("movies", [])
+    user_id = session["user_id"]
+    if selected_movies:
+        seed_ids = [int(m) for m in selected_movies][:3]  # Lấy tối đa 3 phim
         users = load_users()
-        idx   = users[users["user_id"] == user_id].index
+        idx = users[users["user_id"] == user_id].index
         if not idx.empty:
             users.at[idx[0], "favorite_movies"] = "|".join(map(str, seed_ids))
             save_users(users)
@@ -151,8 +156,16 @@ def home():
     user_id = session["user_id"]
     movies  = load_movies_df()
     genres  = get_all_genres(movies)
+    
+    rec_limit = request.args.get("rec_limit", 16)
+    try:
+        rec_limit = int(rec_limit)
+        if rec_limit not in [8, 16, 24]:
+            rec_limit = 16
+    except ValueError:
+        rec_limit = 16
 
-    # ── Section 1: Gợi ý cá nhân hóa — chỉ 12 phim ──
+    # ── Section 1: Gợi ý cá nhân hóa ──
     recs            = []
     is_personalized = False
     cluster_id      = None
@@ -171,16 +184,16 @@ def home():
 
         if seed:
             cluster_id = predict_cluster_from_seed(seed)
-            recs_df    = recommend_from_seed(seed, top_k=18, use_penalty=True)
+            recs_df    = recommend_from_seed(seed, top_k=rec_limit, use_penalty=True)
             if not recs_df.empty:
                 recs            = recs_df.to_dict("records")
                 is_personalized = True
 
         if not recs:
-            recs = popular_movies(top_k=18).to_dict("records")
+            recs = popular_movies(top_k=rec_limit).to_dict("records")
 
     except Exception:
-        recs = movies.sort_values("avg_rating", ascending=False).head(18).to_dict("records")
+        recs = movies.sort_values("avg_rating", ascending=False).head(rec_limit).to_dict("records")
 
     # ── Section 2: Tất cả phim — có filter + pagination ──
     selected_genre = request.args.get("genre", "")
@@ -215,7 +228,95 @@ def home():
         total_pages     = total_pages,
         total           = total,
         per_page        = per_page,
+        rec_limit       = rec_limit,
     )
+
+
+@app.route("/movie/<int:movie_id>")
+@login_required
+def movie_detail(movie_id):
+    movies = load_movies_df()
+    movie = movies[movies["movie_id"] == movie_id]
+    if movie.empty:
+        return "Không tìm thấy phim", 404
+    return render_template("movie_detail.html", movie=movie.iloc[0].to_dict())
+
+
+@app.route("/favorites")
+@login_required
+def favorites():
+    user_id = session["user_id"]
+    users = load_users()
+    row = users[users["user_id"] == user_id]
+    
+    initial_ids = []
+    if not row.empty:
+        favs_str = str(row.iloc[0].get("favorite_movies", ""))
+        if favs_str and favs_str != "nan":
+            fav_ids = [int(x) for x in favs_str.split("|") if x.strip().isdigit()]
+            initial_ids = fav_ids[:3]  # 3 phim đầu tiên là "ban đầu"
+            
+    later_ids = []
+    liked_path = DATA_DIR / "liked.csv"
+    if liked_path.exists():
+        liked_df = pd.read_csv(liked_path)
+        user_liked = liked_df[liked_df["user_id"] == user_id]
+        if not user_liked.empty:
+            all_liked = user_liked["movie_id"].astype(int).tolist()
+            # Lọc bỏ các phim đã có trong danh sách ban đầu để tránh trùng lặp
+            later_ids = [m for m in all_liked if m not in initial_ids]
+    
+    movies = load_movies_df()
+    initial_movies = movies[movies["movie_id"].isin(initial_ids)].to_dict("records")
+    later_movies = movies[movies["movie_id"].isin(later_ids)].to_dict("records")
+    
+    return render_template("favorites.html", 
+                           initial_favorites=initial_movies, 
+                           later_favorites=later_movies)
+
+
+@app.route("/favorite/add", methods=["POST"])
+@login_required
+def add_favorite():
+    user_id = session["user_id"]
+    movie_id = request.form.get("movie_id")
+    if movie_id and movie_id.isdigit():
+        movie_id = int(movie_id)
+        
+        liked_path = DATA_DIR / "liked.csv"
+        if liked_path.exists():
+            liked_df = pd.read_csv(liked_path)
+            already_liked = liked_df[(liked_df["user_id"] == user_id) & (liked_df["movie_id"] == movie_id)]
+            if already_liked.empty:
+                new_row = pd.DataFrame([{"user_id": user_id, "movie_id": movie_id, "rating": 5}])
+                liked_df = pd.concat([liked_df, new_row], ignore_index=True)
+                liked_df.to_csv(liked_path, index=False)
+        else:
+            new_df = pd.DataFrame([{"user_id": user_id, "movie_id": movie_id, "rating": 5}])
+            new_df.to_csv(liked_path, index=False)
+                
+    return redirect(url_for("favorites"))
+
+
+@app.route("/favorite/remove", methods=["POST"])
+@login_required
+def remove_favorite():
+    user_id = session["user_id"]
+    movie_id = request.form.get("movie_id")
+    if movie_id and movie_id.isdigit():
+        movie_id = int(movie_id)
+        
+        liked_path = DATA_DIR / "liked.csv"
+        if liked_path.exists():
+            liked_df = pd.read_csv(liked_path)
+            # Giữ lại các phim không khớp với (user_id và movie_id)
+            mask = ~((liked_df["user_id"] == user_id) & (liked_df["movie_id"] == movie_id))
+            if not mask.all():
+                liked_df = liked_df[mask]
+                liked_df.to_csv(liked_path, index=False)
+                
+    return redirect(url_for("favorites"))
+
 
 
 # ── API: live search navbar ───────────────────────────────────────────────────

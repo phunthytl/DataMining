@@ -1,0 +1,235 @@
+import sys
+import os
+from pathlib import Path
+from functools import wraps
+
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+import pandas as pd
+
+ROOT = Path(__file__).resolve().parent.parent  # project root
+DATA_DIR = ROOT / "data"
+MODEL_DIR = ROOT / "model"
+
+sys.path.insert(0, str(ROOT))
+
+app = Flask(__name__)
+app.secret_key = "cinemadb_secret_key_2024"
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def load_users() -> pd.DataFrame:
+    path = DATA_DIR / "users.csv"
+    if not path.exists():
+        return pd.DataFrame(columns=["user_id", "account", "password", "birth_year", "gender", "favorite_movies"])
+    return pd.read_csv(path)
+
+
+def save_users(df: pd.DataFrame):
+    df.to_csv(DATA_DIR / "users.csv", index=False)
+
+
+def load_movies_df() -> pd.DataFrame:
+    path = DATA_DIR / "movies_clean.csv"
+    if not path.exists():
+        path = DATA_DIR / "movies.csv"
+    df = pd.read_csv(path)
+    df["poster_url"]  = df.get("poster_url",  pd.Series(dtype=str)).fillna("")
+    df["overview"]    = df.get("overview",     pd.Series(dtype=str)).fillna("")
+    df["avg_rating"]  = df.get("avg_rating",   pd.Series(dtype=float)).fillna(0.0)
+    df["num_ratings"] = df.get("num_ratings",  pd.Series(dtype=int)).fillna(0)
+    return df
+
+
+def get_all_genres(movies: pd.DataFrame) -> list:
+    genres = movies["genres"].fillna("").str.split("|").explode()
+    return sorted(genres[genres != ""].unique().tolist())
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+
+@app.route("/")
+def index():
+    return redirect(url_for("home") if "user_id" in session else url_for("login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        account  = request.form.get("account", "").strip()
+        password = request.form.get("password", "").strip()
+        users = load_users()
+        user  = users[(users["account"] == account) & (users["password"] == password)]
+        if not user.empty:
+            row = user.iloc[0]
+            session["user_id"] = int(row["user_id"])
+            session["account"] = row["account"]
+            return redirect(url_for("home"))
+        error = "Tài khoản hoặc mật khẩu không đúng."
+    return render_template("login.html", error=error)
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    error = None
+    if request.method == "POST":
+        account    = request.form.get("account", "").strip()
+        password   = request.form.get("password", "").strip()
+        gender     = request.form.get("gender", "Other")
+        birth_year = request.form.get("birth_year", "2000")
+        if not account or not password:
+            error = "Vui lòng điền đầy đủ thông tin."
+        else:
+            users = load_users()
+            if account in users["account"].values:
+                error = "Tài khoản đã tồn tại."
+            else:
+                new_id   = int(users["user_id"].max()) + 1 if not users.empty else 1
+                new_user = pd.DataFrame([{
+                    "user_id": new_id, "account": account, "password": password,
+                    "birth_year": int(birth_year), "gender": gender, "favorite_movies": ""
+                }])
+                users = pd.concat([users, new_user], ignore_index=True)
+                save_users(users)
+                session["user_id"] = new_id
+                session["account"] = account
+                session["new_user"] = True
+                return redirect(url_for("onboarding"))
+    return render_template("register.html", error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+# ── Onboarding ────────────────────────────────────────────────────────────────
+
+@app.route("/onboarding")
+@login_required
+def onboarding():
+    movies = load_movies_df()
+    return render_template("onboarding.html", genres=get_all_genres(movies))
+
+
+@app.route("/onboarding/save", methods=["POST"])
+@login_required
+def save_onboarding():
+    data            = request.get_json()
+    selected_genres = data.get("genres", [])
+    user_id         = session["user_id"]
+    if selected_genres:
+        movies = load_movies_df()
+        def has_genre(g):
+            return bool(set(str(g).split("|")).intersection(selected_genres))
+        filtered = movies[movies["genres"].apply(has_genre)]
+        seed_ids = filtered.sort_values("avg_rating", ascending=False).head(20)["movie_id"].astype(int).tolist()[:10]
+        users = load_users()
+        idx   = users[users["user_id"] == user_id].index
+        if not idx.empty:
+            users.at[idx[0], "favorite_movies"] = "|".join(map(str, seed_ids))
+            save_users(users)
+    session.pop("new_user", None)
+    return jsonify({"ok": True})
+
+
+# ── Home ──────────────────────────────────────────────────────────────────────
+
+@app.route("/home")
+@login_required
+def home():
+    user_id = session["user_id"]
+    movies  = load_movies_df()
+    genres  = get_all_genres(movies)
+
+    # ── Section 1: Gợi ý cá nhân hóa — chỉ 12 phim ──
+    recs            = []
+    is_personalized = False
+    cluster_id      = None
+
+    try:
+        from recommender import recommend_from_seed, user_history_seed, popular_movies, predict_cluster_from_seed
+
+        seed = user_history_seed(user_id, limit=10)
+        if not seed:
+            users = load_users()
+            row   = users[users["user_id"] == user_id]
+            if not row.empty:
+                favs_str = str(row.iloc[0].get("favorite_movies", ""))
+                if favs_str and favs_str != "nan":
+                    seed = [int(x) for x in favs_str.split("|") if x.strip().isdigit()]
+
+        if seed:
+            cluster_id = predict_cluster_from_seed(seed)
+            recs_df    = recommend_from_seed(seed, top_k=18, use_penalty=True)
+            if not recs_df.empty:
+                recs            = recs_df.to_dict("records")
+                is_personalized = True
+
+        if not recs:
+            recs = popular_movies(top_k=18).to_dict("records")
+
+    except Exception:
+        recs = movies.sort_values("avg_rating", ascending=False).head(18).to_dict("records")
+
+    # ── Section 2: Tất cả phim — có filter + pagination ──
+    selected_genre = request.args.get("genre", "")
+    search_q       = request.args.get("q", "").strip().lower()
+    page           = max(1, request.args.get("page", 1, type=int))
+    per_page       = 36  # số phim mỗi trang
+
+    all_movies = movies.copy()
+    if selected_genre:
+        all_movies = all_movies[all_movies["genres"].str.contains(selected_genre, na=False)]
+    if search_q:
+        all_movies = all_movies[all_movies["title"].str.lower().str.contains(search_q, na=False)]
+
+    all_movies   = all_movies.sort_values("avg_rating", ascending=False)
+    total        = len(all_movies)
+    total_pages  = max(1, (total + per_page - 1) // per_page)
+    page         = min(page, total_pages)
+    offset       = (page - 1) * per_page
+    page_movies  = all_movies.iloc[offset : offset + per_page]
+
+    return render_template(
+        "home.html",
+        recs            = recs,
+        all_movies      = page_movies.to_dict("records"),
+        genres          = genres,
+        selected_genre  = selected_genre,
+        search_q        = search_q,
+        is_personalized = is_personalized,
+        cluster_id      = cluster_id,
+        account         = session.get("account", ""),
+        page            = page,
+        total_pages     = total_pages,
+        total           = total,
+        per_page        = per_page,
+    )
+
+
+# ── API: live search navbar ───────────────────────────────────────────────────
+
+@app.route("/api/search")
+@login_required
+def api_search():
+    q = request.args.get("q", "").strip().lower()
+    if not q:
+        return jsonify([])
+    movies  = load_movies_df()
+    results = movies[movies["title"].str.lower().str.contains(q, na=False)].head(10)
+    return jsonify(results[["movie_id", "title", "genres", "poster_url", "avg_rating"]].to_dict("records"))
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)

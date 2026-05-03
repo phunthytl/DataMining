@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Chọn thể loại yêu thích — CineRec{% endblock %}
+
+{% block extra_styles %}
+.onboard-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  position: relative;
+}
+.onboard-bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(201,168,76,0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 10% 90%, rgba(100,80,200,0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+.onboard-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  animation: fadeUp 0.5s ease forwards;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.onboard-eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.75rem;
+}
+.onboard-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
+}
+.onboard-desc {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  max-width: 440px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+.genre-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  max-width: 680px;
+  margin-bottom: 2.5rem;
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+.genre-chip {
+  padding: 0.55rem 1.3rem;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 400;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  transition: all 0.2s ease;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+.genre-chip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gold-dim);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.genre-chip:hover { border-color: rgba(201,168,76,0.4); color: var(--text); }
+.genre-chip:hover::before { opacity: 1; }
+.genre-chip.selected {
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 500;
+}
+.genre-chip.selected::before { opacity: 1; }
+.genre-chip.selected::after {
+  content: '✓';
+  margin-left: 0.4rem;
+  font-size: 0.8rem;
+}
+.onboard-actions {
+  display: flex;
+  gap: 1rem;
+  animation: fadeUp 0.6s 0.2s ease both;
+}
+.selected-count {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+  min-height: 1.2em;
+  transition: color 0.2s;
+}
+.selected-count.has-selection { color: var(--gold); }
+{% endblock %}
+
+{% block content %}
+<div class="onboard-page">
+  <div class="onboard-bg"></div>
+
+  <div class="onboard-header">
+    <p class="onboard-eyebrow">Bước cuối cùng</p>
+    <h1 class="onboard-title">Bạn thích thể loại phim nào?</h1>
+    <p class="onboard-desc">
+      Chọn một hoặc nhiều thể loại để CineRec cá nhân hóa danh sách gợi ý cho bạn.
+    </p>
+  </div>
+
+  <div class="genre-grid" id="genreGrid">
+    {% for genre in genres %}
+    <div class="genre-chip" data-genre="{{ genre }}" onclick="toggleGenre(this)">{{ genre }}</div>
+    {% endfor %}
+  </div>
+
+  <p class="selected-count" id="selectedCount">Chưa chọn thể loại nào</p>
+
+  <div class="onboard-actions">
+    <button class="btn btn-outline" onclick="skipOnboarding()">Bỏ qua</button>
+    <button class="btn btn-gold" id="continueBtn" onclick="saveAndContinue()">Tiếp tục →</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const selected = new Set();
+
+  function toggleGenre(el) {
+    const g = el.dataset.genre;
+    if (selected.has(g)) {
+      selected.delete(g);
+      el.classList.remove('selected');
+    } else {
+      selected.add(g);
+      el.classList.add('selected');
+    }
+    updateCount();
+  }
+
+  function updateCount() {
+    const el = document.getElementById('selectedCount');
+    if (selected.size === 0) {
+      el.textContent = 'Chưa chọn thể loại nào';
+      el.classList.remove('has-selection');
+    } else {
+      el.textContent = `Đã chọn ${selected.size} thể loại`;
+      el.classList.add('has-selection');
+    }
+  }
+
+  async function saveAndContinue() {
+    const btn = document.getElementById('continueBtn');
+    btn.disabled = true;
+    btn.textContent = 'Đang lưu...';
+    try {
+      await fetch('/onboarding/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ genres: [...selected] })
+      });
+    } catch(e) {}
+    window.location.href = '/home';
+  }
+
+  function skipOnboarding() {
+    fetch('/onboarding/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ genres: [] })
+    }).finally(() => { window.location.href = '/home'; });
+  }
+</script>
+{% endblock %}

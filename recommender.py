@@ -2,10 +2,8 @@ from collections import defaultdict
 from pathlib import Path
 
 import math
-
 import joblib
 import pandas as pd
-
 import numpy as np
 
 ROOT = Path(__file__).resolve().parent
@@ -14,14 +12,29 @@ MODEL_DIR = ROOT / "model"
 
 
 def load_movies() -> pd.DataFrame:
-    movies = pd.read_csv(DATA_DIR / "movies.csv")
+    path = DATA_DIR / "movies_clean.csv"
+    if not path.exists():
+        path = DATA_DIR / "movies.csv"
+    movies = pd.read_csv(path)
     movies["poster_url"] = movies.get("poster_url", "").fillna("")
     movies["overview"] = movies.get("overview", "").fillna("")
+    movies["avg_rating"]  = movies.get("avg_rating",   pd.Series(dtype=float)).fillna(0.0)
+    movies["num_ratings"] = movies.get("num_ratings",  pd.Series(dtype=int)).fillna(0)
     return movies
 
 
 def load_liked_ratings() -> pd.DataFrame:
-    return pd.read_csv(DATA_DIR / "liked.csv")
+    path = DATA_DIR / "ratings.csv"
+    if not path.exists():
+        path = DATA_DIR / "liked.csv"
+    return pd.read_csv(path)
+
+
+def load_users() -> pd.DataFrame:
+    path = DATA_DIR / "users.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
 
 
 def load_kmeans_and_genres() -> tuple:
@@ -34,7 +47,6 @@ def load_cluster_model(cluster_id: int) -> dict:
     try:
         return joblib.load(MODEL_DIR / f"fpgrowth_cluster_{cluster_id}.joblib")
     except FileNotFoundError:
-        # Fallback to general model if not found or using old setup
         return joblib.load(MODEL_DIR / "fpgrowth_rules.joblib")
 
 
@@ -73,32 +85,41 @@ def recommend_from_seed(seed_movie_ids: list[int], top_k: int = 12, use_penalty:
     print(f"DEBUG: Predicted Cluster -> {cluster_id}")
     
     movies = load_movies()
-    artifact = load_cluster_model(cluster_id)
-    index = artifact.get("recommendation_index", {})
     seen = set(map(int, seed_movie_ids))
-    scores: dict[int, dict] = defaultdict(lambda: {"score": 0.0, "confidence": 0.0, "lift": 0.0, "support_count": 0, "matched_from": []})
+    
+    def get_scores(idx_dict):
+        scores_dict = defaultdict(lambda: {"score": 0.0, "confidence": 0.0, "lift": 0.0, "support_count": 0, "matched_from": []})
+        for m_id in seen:
+            for row in idx_dict.get(m_id, []):
+                target = int(row["target"])
+                if target in seen:
+                    continue
+                contribution = float(row["confidence"]) * float(row["lift"])
+                scores_dict[target]["score"] += contribution
+                scores_dict[target]["confidence"] = max(scores_dict[target]["confidence"], float(row["confidence"]))
+                scores_dict[target]["lift"] = max(scores_dict[target]["lift"], float(row["lift"]))
+                scores_dict[target]["support_count"] = max(scores_dict[target]["support_count"], int(row["support_count"]))
+                scores_dict[target]["matched_from"].append(m_id)
+        return scores_dict
 
-    for movie_id in seen:
-        for row in index.get(movie_id, []):
-            target = int(row["target"])
-            if target in seen:
-                continue
-            contribution = float(row["confidence"]) * float(row["lift"])
-            scores[target]["score"] += contribution
-            scores[target]["confidence"] = max(scores[target]["confidence"], float(row["confidence"]))
-            scores[target]["lift"] = max(scores[target]["lift"], float(row["lift"]))
-            scores[target]["support_count"] = max(scores[target]["support_count"], int(row["support_count"]))
-            scores[target]["matched_from"].append(movie_id)
+    artifact = load_cluster_model(cluster_id)
+    scores = get_scores(artifact.get("recommendation_index", {}))
+
+    # Fallback 1: Nếu cụm không có dữ liệu, dùng mô hình chung (cluster 0)
+    if not scores and cluster_id != 0:
+        print("DEBUG: No rules found in cluster. Fallback to cluster 0")
+        artifact_0 = load_cluster_model(0)
+        scores = get_scores(artifact_0.get("recommendation_index", {}))
 
     if not scores:
         return pd.DataFrame(columns=["movie_id", "score", "confidence", "lift", "support_count", "matched_from"])
 
     rows = []
     for movie_id, info in scores.items():
-        # Áp dụng Penalty Factor (Hệ số phạt Logarit) chống thiên vị phim phổ biến
         penalty_factor = math.log10(info["support_count"] + 10) if use_penalty else 1.0
         normalized_score = info["score"] / penalty_factor
         rows.append({"movie_id": movie_id, **info, "normalized_score": normalized_score, "matched_from": sorted(set(info["matched_from"]))})
+    
     score_df = pd.DataFrame(rows).sort_values(["normalized_score", "score", "lift", "confidence", "support_count"], ascending=False)
     recs = score_df.head(top_k).merge(movies, on="movie_id", how="left")
     return recs
@@ -116,12 +137,36 @@ def popular_movies(top_k: int = 12, exclude: set[int] | None = None) -> pd.DataF
     pop["lift"] = 0.0
     pop["support_count"] = pop["liked_count"]
     pop["matched_from"] = [[] for _ in range(len(pop))]
+    
+    overlap = set(pop.columns).intersection(set(movies.columns)) - {"movie_id"}
+    pop = pop.drop(columns=list(overlap))
+    
     return pop.head(top_k).merge(movies, on="movie_id", how="left")
 
 
 def user_history_seed(user_id: int, limit: int | None = 10) -> list[int]:
+    seed_ids = []
+    
     liked = load_liked_ratings()
-    rows = liked[liked["user_id"] == user_id].sort_values("rating", ascending=False)
+    if not liked.empty and "user_id" in liked.columns:
+        rows = liked[liked["user_id"] == user_id].sort_values("rating", ascending=False)
+        seed_ids.extend(rows["movie_id"].astype(int).tolist())
+        
+    users = load_users()
+    if not users.empty and "user_id" in users.columns:
+        user_row = users[users["user_id"] == user_id]
+        if not user_row.empty:
+            favs_str = str(user_row.iloc[0].get("favorite_movies", ""))
+            if favs_str and favs_str != "nan":
+                fav_ids = [int(x) for x in favs_str.split("|") if x.strip().isdigit()]
+                seed_ids.extend(fav_ids)
+                
+    unique_seeds = []
+    for sid in seed_ids:
+        if sid not in unique_seeds:
+            unique_seeds.append(sid)
+            
     if limit is not None:
-        rows = rows.head(limit)
-    return rows["movie_id"].astype(int).tolist()
+        unique_seeds = unique_seeds[:limit]
+        
+    return unique_seeds

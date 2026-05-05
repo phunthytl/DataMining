@@ -1,5 +1,5 @@
 user_id,account,password,birth_year,gender,favorite_movies
-1,user_000001,fNX89c,1958,Female,260|2571|1196|541|1214|1240|1253|1200|1199|741
+1,user_000001,fNX89c,1958,Female,260|2571|1196
 2,user_000002,j6Ewas,1999,Male,1370|3105|1953
 3,user_000003,DftiU5,1988,Female,3421|1198|1291
 4,user_000004,B2Gv8C,2005,Male,2947|2692|2951
@@ -6039,3 +6039,5 @@ user_id,account,password,birth_year,gender,favorite_movies
 6038,user_006038,3SoNVQ,2003,Female,2146|3088|356
 6039,user_006039,fDmU3a,1951,Male,1964|942|3548
 6040,user_006040,fL1pcv,1992,Male,3089|1250|1244
+6041,test,123456,2000,Male,260|1210|1196
+6042,test1,123,2000,Female,1213|1704|2000

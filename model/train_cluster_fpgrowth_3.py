@@ -46,7 +46,7 @@ def train_fpgrowth_for_cluster(cluster_id: int, liked_subset: pd.DataFrame, popu
     if len(txn) < 10:
         return
         
-    frequent_itemsets = fpgrowth(txn, min_support=MIN_SUPPORT, use_colnames=True, max_len=2)
+    frequent_itemsets = fpgrowth(txn, min_support=MIN_SUPPORT, use_colnames=True, max_len=3)
     frequent_itemsets["itemsets"] = frequent_itemsets["itemsets"].apply(lambda s: frozenset(int(x) for x in s))
     
     rules_df = association_rules(frequent_itemsets, metric="confidence", min_threshold=MIN_CONFIDENCE)
@@ -82,7 +82,7 @@ def train_fpgrowth_for_cluster(cluster_id: int, liked_subset: pd.DataFrame, popu
         "recommendation_index": index,
         "popular_movies": popularity.to_dict("records"),
     }
-    joblib.dump(artifact, MODEL_DIR / f"fpgrowth_cluster_{cluster_id}.joblib", compress=3)
+    joblib.dump(artifact, MODEL_DIR / f"fpgrowth_cluster_3_{cluster_id}.joblib", compress=3)
     return len(rules_df)
 
 def train_cluster_model():
@@ -135,7 +135,7 @@ def train_cluster_model():
     for stat in cluster_stats:
         print(f"Cụm {stat['cluster_id']}: {stat['user_count']} users, {stat['rules_generated']} luật kết hợp.")
     
-    (REPORT_DIR / "cluster_fpgrowth_metrics.json").write_text(json.dumps(cluster_stats, indent=2))
+    (REPORT_DIR / "cluster_fpgrowth_metrics_3.json").write_text(json.dumps(cluster_stats, indent=2))
 
 if __name__ == "__main__":
     train_cluster_model()

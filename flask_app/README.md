@@ -47,8 +47,7 @@ Mở trình duyệt: http://localhost:5000
 - **Đăng xuất**: Xóa session
 
 ### Onboarding (xuất hiện sau khi đăng ký)
-- Chọn thể loại phim yêu thích (multi-select chips)
-- Hệ thống lưu seed movies tương ứng với thể loại đã chọn
+- Chọn phim yêu thích (multi-select chips)
 - Có thể **bỏ qua (Skip)** → vào thẳng trang chủ
 
 ### Trang chủ
@@ -61,7 +60,7 @@ Mở trình duyệt: http://localhost:5000
 - **Modal popup**: Click vào phim → popup chi tiết (poster, genres, rating, điểm, overview)
 - **Fallback logic**:
   1. Nếu có lịch sử liked → dùng `recommend_from_seed()`
-  2. Nếu có onboarding genres → dùng seed từ thể loại đã chọn
+  2. Nếu có onboarding phim → dùng seed từ phim đã chọn
   3. Nếu chưa có gì → hiển thị `popular_movies()`
   4. Nếu model chưa train → fallback `movies.sort_values('avg_rating')`
 

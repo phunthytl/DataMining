@@ -10,11 +10,8 @@ DATA_DIR = ROOT / "data"
 REPORT_DIR = ROOT / "reports"
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
-MIN_RATING = 4.0
-
 def build_user_genre_matrix() -> pd.DataFrame:
     print("Loading data...")
-    # Dùng liked.csv thay vì ratings.csv + filter
     liked = pd.read_csv(DATA_DIR / "liked.csv")
     movies = pd.read_csv(DATA_DIR / "movies.csv")
 

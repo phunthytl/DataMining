@@ -174,13 +174,6 @@ def home():
         from recommender import recommend_from_seed, user_history_seed, popular_movies, predict_cluster_from_seed
 
         seed = user_history_seed(user_id, limit=10)
-        if not seed:
-            users = load_users()
-            row   = users[users["user_id"] == user_id]
-            if not row.empty:
-                favs_str = str(row.iloc[0].get("favorite_movies", ""))
-                if favs_str and favs_str != "nan":
-                    seed = [int(x) for x in favs_str.split("|") if x.strip().isdigit()]
 
         if seed:
             cluster_id = predict_cluster_from_seed(seed)
@@ -257,14 +250,18 @@ def favorites():
             initial_ids = fav_ids[:3]  # 3 phim đầu tiên là "ban đầu"
             
     later_ids = []
-    liked_path = DATA_DIR / "liked.csv"
-    if liked_path.exists():
-        liked_df = pd.read_csv(liked_path)
-        user_liked = liked_df[liked_df["user_id"] == user_id]
+    user_ratings = {}
+    ratings_path = DATA_DIR / "ratings.csv"
+    if ratings_path.exists():
+        ratings_df = pd.read_csv(ratings_path)
+        user_liked = ratings_df[ratings_df["user_id"] == user_id]
         if not user_liked.empty:
-            all_liked = user_liked["movie_id"].astype(int).tolist()
-            # Lọc bỏ các phim đã có trong danh sách ban đầu để tránh trùng lặp
-            later_ids = [m for m in all_liked if m not in initial_ids]
+            for _, r in user_liked.iterrows():
+                m_id = int(r["movie_id"])
+                if m_id not in initial_ids:
+                    if m_id not in later_ids:
+                        later_ids.append(m_id)
+                    user_ratings[m_id] = float(r["rating"])
     
     movies = load_movies_df()
     initial_movies = movies[movies["movie_id"].isin(initial_ids)].to_dict("records")
@@ -272,28 +269,33 @@ def favorites():
     
     return render_template("favorites.html", 
                            initial_favorites=initial_movies, 
-                           later_favorites=later_movies)
+                           later_favorites=later_movies,
+                           user_ratings=user_ratings)
 
 
-@app.route("/favorite/add", methods=["POST"])
+@app.route("/movie/rate", methods=["POST"])
 @login_required
-def add_favorite():
+def rate_movie():
     user_id = session["user_id"]
     movie_id = request.form.get("movie_id")
+    rating = request.form.get("rating", 5)
     if movie_id and movie_id.isdigit():
         movie_id = int(movie_id)
+        rating = float(rating)
         
-        liked_path = DATA_DIR / "liked.csv"
-        if liked_path.exists():
-            liked_df = pd.read_csv(liked_path)
-            already_liked = liked_df[(liked_df["user_id"] == user_id) & (liked_df["movie_id"] == movie_id)]
-            if already_liked.empty:
-                new_row = pd.DataFrame([{"user_id": user_id, "movie_id": movie_id, "rating": 5}])
-                liked_df = pd.concat([liked_df, new_row], ignore_index=True)
-                liked_df.to_csv(liked_path, index=False)
+        ratings_path = DATA_DIR / "ratings.csv"
+        if ratings_path.exists():
+            ratings_df = pd.read_csv(ratings_path)
+            already_liked_idx = ratings_df[(ratings_df["user_id"] == user_id) & (ratings_df["movie_id"] == movie_id)].index
+            if not already_liked_idx.empty:
+                ratings_df.loc[already_liked_idx, "rating"] = rating
+            else:
+                new_row = pd.DataFrame([{"user_id": user_id, "movie_id": movie_id, "rating": rating}])
+                ratings_df = pd.concat([ratings_df, new_row], ignore_index=True)
+            ratings_df.to_csv(ratings_path, index=False)
         else:
-            new_df = pd.DataFrame([{"user_id": user_id, "movie_id": movie_id, "rating": 5}])
-            new_df.to_csv(liked_path, index=False)
+            new_df = pd.DataFrame([{"user_id": user_id, "movie_id": movie_id, "rating": rating}])
+            new_df.to_csv(ratings_path, index=False)
                 
     return redirect(url_for("favorites"))
 
@@ -306,14 +308,14 @@ def remove_favorite():
     if movie_id and movie_id.isdigit():
         movie_id = int(movie_id)
         
-        liked_path = DATA_DIR / "liked.csv"
-        if liked_path.exists():
-            liked_df = pd.read_csv(liked_path)
+        ratings_path = DATA_DIR / "ratings.csv"
+        if ratings_path.exists():
+            ratings_df = pd.read_csv(ratings_path)
             # Giữ lại các phim không khớp với (user_id và movie_id)
-            mask = ~((liked_df["user_id"] == user_id) & (liked_df["movie_id"] == movie_id))
+            mask = ~((ratings_df["user_id"] == user_id) & (ratings_df["movie_id"] == movie_id))
             if not mask.all():
-                liked_df = liked_df[mask]
-                liked_df.to_csv(liked_path, index=False)
+                ratings_df = ratings_df[mask]
+                ratings_df.to_csv(ratings_path, index=False)
                 
     return redirect(url_for("favorites"))
 

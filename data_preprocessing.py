@@ -9,18 +9,15 @@ ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 
 def preprocess_datasets():
-    print("--- Bắt đầu Tiền xử lý dữ liệu (Data Preprocessing) ---")
     ratings = pd.read_csv(DATA_DIR / "ratings.csv")
     movies = pd.read_csv(DATA_DIR / "movies.csv")
     
     # 1. Xử lý ratings.csv
     print(f"Xử lý ratings.csv (Ban đầu: {len(ratings)} dòng)...")
     ratings.drop_duplicates(inplace=True)
-    # Ràng buộc miền giá trị rating [1, 5]
     ratings = ratings[(ratings["rating"] >= 1.0) & (ratings["rating"] <= 5.0)]
     
     # 2. Xử lý movies.csv
-    print(f"Xử lý movies.csv (Ban đầu: {len(movies)} dòng)...")
     movies.drop_duplicates(subset=["movie_id"], keep="first", inplace=True)
     
     # Xử lý missing values
@@ -41,11 +38,10 @@ def preprocess_datasets():
     # Missing tmdb_rating lấy bằng avg_rating
     movies["tmdb_rating"] = movies["tmdb_rating"].fillna(movies["avg_rating"])
     
-    # 3. Tính toàn vẹn dữ liệu (Referential Integrity)
+    # 3. Đảm bảo tính toàn vẹn dữ liệu
     valid_movie_ids = set(movies["movie_id"])
     ratings = ratings[ratings["movie_id"].isin(valid_movie_ids)]
     
-    # LƯU RA FILE MỚI, KHÔNG GHI ĐÈ FILE CŨ (ratings.csv / movies.csv)
     movies_clean_path = DATA_DIR / "movies_clean.csv"
     ratings_clean_path = DATA_DIR / "ratings_clean.csv"
     
@@ -53,8 +49,6 @@ def preprocess_datasets():
     ratings.to_csv(ratings_clean_path, index=False)
     
     print(f"Hoàn thành tiền xử lý!")
-    print(f" -> Đã lưu: {movies_clean_path.name} ({len(movies)} dòng)")
-    print(f" -> Đã lưu: {ratings_clean_path.name} ({len(ratings)} dòng)")
     
     return ratings, movies
 

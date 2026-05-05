@@ -41,7 +41,11 @@ def build_transaction_matrix(ratings: pd.DataFrame) -> pd.DataFrame:
 def train():
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    ratings = pd.read_csv(DATA_DIR / "ratings.csv")
+    
+    import sqlite3
+    conn = sqlite3.connect(DATA_DIR / "database.db")
+    ratings = pd.read_sql("SELECT * FROM ratings", conn)
+    conn.close()
     txn = build_transaction_matrix(ratings)
     frequent_itemsets = fpgrowth(txn, min_support=MIN_SUPPORT, use_colnames=True, max_len=2)
     frequent_itemsets["itemsets"] = frequent_itemsets["itemsets"].apply(lambda s: frozenset(int(x) for x in s))

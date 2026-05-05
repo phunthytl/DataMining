@@ -28,7 +28,7 @@ def test_single_user(user_id=None):
     else:
         print(f"[*] Đang phân tích User: {user_id}")
         if user_id not in liked['user_id'].values:
-            print("Lỗi: Không tìm thấy người dùng này trong cơ sở dữ liệu (data/liked.csv).")
+            print("Lỗi: Không tìm thấy người dùng này trong cơ sở dữ liệu (Database).")
             return
 
     seed_movie_ids = user_history_seed(user_id, limit=10)

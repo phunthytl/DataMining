@@ -1,5 +1,7 @@
 import json
+import time
 from collections import defaultdict
+import sqlite3
 from pathlib import Path
 
 import joblib
@@ -12,6 +14,10 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 MODEL_DIR = ROOT / "model"
 REPORT_DIR = ROOT / "reports"
+DB_PATH = DATA_DIR / "database.db"
+
+def get_db_conn():
+    return sqlite3.connect(DB_PATH)
 
 MIN_SUPPORT = 0.02
 MIN_CONFIDENCE = 0.20
@@ -89,9 +95,12 @@ def train_cluster_model():
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     
-    liked = pd.read_csv(DATA_DIR / "liked.csv")
-    movies = pd.read_csv(DATA_DIR / "movies.csv")
-    movies = pd.read_csv(DATA_DIR / "movies.csv")
+    conn = get_db_conn()
+    print("Loading data from database...")
+    liked = pd.read_sql("SELECT * FROM ratings WHERE rating >= 4.0", conn)
+    movies = pd.read_sql("SELECT * FROM movies", conn)
+    total_ratings = pd.read_sql("SELECT COUNT(*) as count FROM ratings", conn).iloc[0]["count"]
+    conn.close()
     
     # 1. Feature Extraction
     print("Trích xuất đặc trưng User-Genre...")
@@ -136,6 +145,13 @@ def train_cluster_model():
         print(f"Cụm {stat['cluster_id']}: {stat['user_count']} users, {stat['rules_generated']} luật kết hợp.")
     
     (REPORT_DIR / "cluster_fpgrowth_metrics.json").write_text(json.dumps(cluster_stats, indent=2))
+    
+    # Lưu thông tin số lượng data và thời gian tại thời điểm train
+    train_info = {
+        "last_train_ratings": int(total_ratings),
+        "last_train_timestamp": time.time()
+    }
+    (MODEL_DIR / "train_info.json").write_text(json.dumps(train_info, indent=2))
 
 if __name__ == "__main__":
     train_cluster_model()

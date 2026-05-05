@@ -6,35 +6,40 @@ import joblib
 import pandas as pd
 import numpy as np
 
+import sqlite3
+
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 MODEL_DIR = ROOT / "model"
+DB_PATH = DATA_DIR / "database.db"
 
+def get_db_conn():
+    return sqlite3.connect(DB_PATH)
 
 def load_movies() -> pd.DataFrame:
-    path = DATA_DIR / "movies_clean.csv"
-    if not path.exists():
-        path = DATA_DIR / "movies.csv"
-    movies = pd.read_csv(path)
+    conn = get_db_conn()
+    movies = pd.read_sql("SELECT * FROM movies", conn)
+    conn.close()
     movies["poster_url"] = movies.get("poster_url", "").fillna("")
     movies["overview"] = movies.get("overview", "").fillna("")
     movies["avg_rating"]  = movies.get("avg_rating",   pd.Series(dtype=float)).fillna(0.0)
     movies["num_ratings"] = movies.get("num_ratings",  pd.Series(dtype=int)).fillna(0)
     return movies
+    return movies
 
 
 def load_liked_ratings() -> pd.DataFrame:
-    path = DATA_DIR / "ratings.csv"
-    if not path.exists():
-        path = DATA_DIR / "liked.csv"
-    return pd.read_csv(path)
+    conn = get_db_conn()
+    liked = pd.read_sql("SELECT * FROM ratings WHERE rating >= 4.0", conn)
+    conn.close()
+    return liked
 
 
 def load_users() -> pd.DataFrame:
-    path = DATA_DIR / "users.csv"
-    if not path.exists():
-        return pd.DataFrame()
-    return pd.read_csv(path)
+    conn = get_db_conn()
+    users = pd.read_sql("SELECT * FROM users", conn)
+    conn.close()
+    return users
 
 
 def load_kmeans_and_genres() -> tuple:

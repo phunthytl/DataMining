@@ -5,15 +5,20 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.cluster import KMeans
 
+import sqlite3
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 REPORT_DIR = ROOT / "reports"
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DATA_DIR / "database.db"
 
 def build_user_genre_matrix() -> pd.DataFrame:
-    print("Loading data...")
-    liked = pd.read_csv(DATA_DIR / "liked.csv")
-    movies = pd.read_csv(DATA_DIR / "movies.csv")
+    print("Loading data from database...")
+    conn = sqlite3.connect(DB_PATH)
+    liked = pd.read_sql("SELECT * FROM ratings WHERE rating >= 4.0", conn)
+    movies = pd.read_sql("SELECT * FROM movies", conn)
+    conn.close()
 
     # Merge to get genres
     df = liked.merge(movies[["movie_id", "genres"]], on="movie_id")

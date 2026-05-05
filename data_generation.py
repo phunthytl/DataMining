@@ -2,6 +2,7 @@ import os
 import sys
 import random
 import string
+import sqlite3
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -13,6 +14,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
+DB_PATH = DATA_DIR / "database.db"
 REPORT_DIR = ROOT / "reports"
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -37,11 +39,8 @@ def generate_users_and_liked(ratings: pd.DataFrame, movies: pd.DataFrame):
     accounts = [f"user_{uid:06d}" for uid in user_ids]
     passwords = [generate_password() for _ in range(num_users)]
     
-    # Lọc file liked (rating >= 4.0) và lưu
+    # Lọc các phim được thích (rating >= 4.0)
     liked_ratings = ratings[ratings["rating"] >= 4.0]
-    liked_path = DATA_DIR / "liked.csv"
-    liked_ratings.to_csv(liked_path, index=False)
-    print(f"Đã lưu liked.csv với {len(liked_ratings)} lượt đánh giá >= 4.0.")
     
     # Tạo danh sách phim yêu thích ngẫu nhiên (tối đa 3) từ danh sách liked của chính user đó
     user_liked_movies = liked_ratings.groupby("user_id")["movie_id"].apply(list).to_dict()
@@ -64,9 +63,10 @@ def generate_users_and_liked(ratings: pd.DataFrame, movies: pd.DataFrame):
         "favorite_movies": favorite_movies_list
     })
     
-    users_path = DATA_DIR / "users.csv"
-    users_df.to_csv(users_path, index=False)
-    print(f"Đã lưu thành công users.csv.")
+    conn = sqlite3.connect(DB_PATH)
+    users_df.to_sql("users", conn, if_exists="replace", index=False)
+    conn.close()
+    print(f"Đã cập nhật bảng users trong database.db.")
     
     return users_df
 
@@ -121,17 +121,14 @@ def draw_descriptive_stats(users, ratings, movies):
     print(f"Đã lưu các biểu đồ tại {REPORT_DIR}")
 
 if __name__ == "__main__":
-    print("Đang đọc dữ liệu đã tiền xử lý...")
+    print("Đang đọc dữ liệu từ database...")
     try:
-        # Ưu tiên đọc file clean nếu có, không thì đọc file gốc
-        if (DATA_DIR / "ratings_clean.csv").exists():
-            ratings_df = pd.read_csv(DATA_DIR / "ratings_clean.csv")
-            movies_df = pd.read_csv(DATA_DIR / "movies_clean.csv")
-        else:
-            ratings_df = pd.read_csv(DATA_DIR / "ratings.csv")
-            movies_df = pd.read_csv(DATA_DIR / "movies.csv")
-    except FileNotFoundError:
-        print("Lỗi: Không tìm thấy file dữ liệu (ratings.csv hoặc movies.csv).")
+        conn = sqlite3.connect(DB_PATH)
+        ratings_df = pd.read_sql("SELECT * FROM ratings", conn)
+        movies_df = pd.read_sql("SELECT * FROM movies", conn)
+        conn.close()
+    except Exception as e:
+        print(f"Lỗi khi đọc dữ liệu từ DB: {e}")
         exit(1)
         
     users_df = generate_users_and_liked(ratings_df, movies_df)

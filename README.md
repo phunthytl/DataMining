@@ -1,44 +1,72 @@
-# Data Mining Movie Recommender - Cluster-Based FP-Growth (Backend/CLI Version)
+# Data Mining Movie Recommender - Cluster-Based FP-Growth
 
-Project xây dựng hệ gợi ý phim nâng cao kết hợp giữa **Phân cụm (K-Means Clustering)** và **Luật kết hợp (FP-Growth)**. Đây là phiên bản Backend/CLI tập trung hoàn toàn vào xử lý mô hình, không chứa giao diện Web.
+Project xây dựng hệ gợi ý phim kết hợp giữa **phân cụm người dùng (K-Means Clustering)** và **khai phá luật kết hợp (FP-Growth)**. Dự án có pipeline xử lý dữ liệu, huấn luyện/đánh giá mô hình, công cụ CLI để kiểm thử gợi ý và giao diện web Flask để demo người dùng.
 
 ## Ý tưởng & Kiến trúc
 
-- **Tiền xử lý (Data Cleaning) & Migration**: Làm sạch dữ liệu, xử lý missing values từ bộ dữ liệu thô và import toàn bộ vào CSDL **SQLite3** (`database.db`) để tối ưu hiệu năng và xử lý đa luồng.
-- **Sinh dữ liệu & EDA**: Trực tiếp truy vấn CSDL để lấy danh sách đánh giá tốt (rating >= 4.0), sinh dữ liệu người dùng mô phỏng và tự động vẽ các biểu đồ phân tích (EDA).
-- **Phân cụm người dùng (K-Means)**: Hệ thống gom nhóm người dùng thành 4 cụm (Clusters) dựa trên ma trận sở thích thể loại phim (Genres).
-- **Khai phá luật (FP-Growth)**: Huấn luyện độc lập 4 mô hình FP-Growth cho 4 cụm. Các luật sinh ra (vd: `Thích phim A => Thích phim B`) sẽ mang tính đặc trưng riêng cho từng nhóm đối tượng.
-- **Cơ chế Penalty Factor**: Áp dụng công thức phạt (Log-penalty) đối với các phim quá phổ biến (Popularity Bias) nhằm đa dạng hóa danh mục gợi ý.
+- **Tiền xử lý (Data Cleaning) & Migration**: Làm sạch dữ liệu, xử lý missing values từ bộ dữ liệu thô và import toàn bộ vào CSDL **SQLite3** (`data/database.db`).
+- **Sinh dữ liệu & EDA**: Truy vấn CSDL để lấy danh sách đánh giá tốt (rating >= 4.0), sinh dữ liệu người dùng mô phỏng và tự động vẽ các biểu đồ phân tích.
+- **Phân cụm người dùng (K-Means)**: Gom nhóm người dùng thành 4 cụm dựa trên ma trận sở thích thể loại phim.
+- **Khai phá luật (FP-Growth)**: Huấn luyện độc lập các tập luật FP-Growth cho từng cụm người dùng.
+- **Penalty Factor**: Áp dụng log-penalty với phim quá phổ biến để giảm popularity bias và tăng độ đa dạng gợi ý.
+- **Flask Web Interface**: Cho phép đăng ký, đăng nhập, onboarding phim yêu thích, xem gợi ý, tìm kiếm phim và quản lý phim yêu thích.
 
-## Cấu trúc File chính
+## Cấu trúc file chính
 
 ```text
-data_preprocessing.py           Làm sạch dữ liệu và khởi tạo CSDL SQLite3 (database.db)
-data_generation.py              Sinh dữ liệu User vào DB và vẽ biểu đồ EDA
-model/train_cluster_fpgrowth.py Huấn luyện cụm K-Means và các tập luật FP-Growth
-model/evaluate_model.py         Kịch bản đo lường (Hit Rate, Precision, Recall, Coverage) & A/B Testing
-recommender.py                  Core Engine: Dự đoán cụm, query luật, tính điểm & penalty
-test_user.py                    CLI Tool để phân tích, debug quá trình gợi ý cho 1 User bất kỳ
+data_preprocessing.py             Làm sạch dữ liệu và khởi tạo SQLite database
+data_generation.py                Sinh dữ liệu user và vẽ biểu đồ EDA
+model/train_cluster_fpgrowth.py   Huấn luyện K-Means và FP-Growth theo cụm
+model/evaluate_model.py           Đánh giá Hit Rate, Precision, Recall, Coverage
+recommender.py                    Core engine dự đoán cụm, query luật và tính điểm gợi ý
+test_user.py                      CLI phân tích quá trình gợi ý cho một user
+flask_app/app.py                  Flask web app demo hệ gợi ý
 ```
 
-## Hướng dẫn chạy
+## Cài đặt
 
-**Bước 1: Tiền xử lý & Sinh dữ liệu (Bắt buộc chạy lần đầu)**
+```bash
+pip install -r requirements.txt
+```
+
+## Hướng dẫn chạy pipeline
+
+**Bước 1: Tiền xử lý & sinh dữ liệu**
+
 ```bash
 python data_preprocessing.py
 python data_generation.py
 ```
 
-**Bước 2: Huấn luyện Mô hình**
+**Bước 2: Huấn luyện mô hình**
+
 ```bash
 python model/train_cluster_fpgrowth.py
 ```
 
-**Bước 3: Đánh giá & Phân tích**
-```bash
-# Xem báo cáo độ chính xác tổng quan và A/B Testing Penalty
-python model/evaluate_model.py
+**Bước 3: Đánh giá & phân tích**
 
-# Xem chi tiết mô phỏng gợi ý cho một User cụ thể
+```bash
+python model/evaluate_model.py
 python test_user.py --user 1
+```
+
+## Chạy giao diện web
+
+```bash
+python flask_app/app.py
+```
+
+Mở trình duyệt tại `http://localhost:5000`.
+
+Có thể bật debug khi chạy local bằng biến môi trường:
+
+```bash
+FLASK_DEBUG=1 python flask_app/app.py
+```
+
+Nếu muốn cấu hình secret key riêng cho session Flask:
+
+```bash
+SECRET_KEY="your-secret-key" python flask_app/app.py
 ```

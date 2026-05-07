@@ -6,6 +6,7 @@ from functools import wraps
 
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import pandas as pd
+from werkzeug.security import check_password_hash, generate_password_hash
 
 ROOT = Path(__file__).resolve().parent.parent  # project root
 DATA_DIR = ROOT / "data"
@@ -15,9 +16,23 @@ DB_PATH = DATA_DIR / "database.db"
 sys.path.insert(0, str(ROOT))
 
 app = Flask(__name__)
-app.secret_key = "cinemadb_secret_key_2024"
+app.secret_key = os.environ.get("SECRET_KEY", "cinemadb_dev_secret_key")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def password_matches(stored_password: str, candidate_password: str) -> bool:
+    if stored_password.startswith(("scrypt:", "pbkdf2:", "argon2:")):
+        return check_password_hash(stored_password, candidate_password)
+    return stored_password == candidate_password
+
+
+def parse_birth_year(value: str) -> int:
+    try:
+        birth_year = int(value)
+    except (TypeError, ValueError):
+        return 2000
+    return birth_year if 1900 <= birth_year <= 2026 else 2000
+
 
 def get_db_conn():
     conn = sqlite3.connect(DB_PATH)
@@ -55,10 +70,10 @@ def login():
         account  = request.form.get("account", "").strip()
         password = request.form.get("password", "").strip()
         conn = get_db_conn()
-        user = conn.execute("SELECT * FROM users WHERE account = ? AND password = ?", (account, password)).fetchone()
+        user = conn.execute("SELECT * FROM users WHERE account = ?", (account,)).fetchone()
         conn.close()
-        
-        if user:
+
+        if user and password_matches(user["password"], password):
             session["user_id"] = user["user_id"]
             session["account"] = user["account"]
             return redirect(url_for("home"))
@@ -73,7 +88,7 @@ def register():
         account    = request.form.get("account", "").strip()
         password   = request.form.get("password", "").strip()
         gender     = request.form.get("gender", "Other")
-        birth_year = request.form.get("birth_year", "2000")
+        birth_year = parse_birth_year(request.form.get("birth_year", "2000"))
         if not account or not password:
             error = "Vui lòng điền đầy đủ thông tin."
         else:
@@ -87,7 +102,7 @@ def register():
                 new_id = int(max_id) + 1 if max_id is not None else 1
                 conn.execute(
                     "INSERT INTO users (user_id, account, password, birth_year, gender, favorite_movies) VALUES (?, ?, ?, ?, ?, ?)",
-                    (new_id, account, password, int(birth_year), gender, "")
+                    (new_id, account, generate_password_hash(password), birth_year, gender, "")
                 )
                 conn.commit()
                 conn.close()
@@ -294,9 +309,13 @@ def rate_movie():
     movie_id = request.form.get("movie_id")
     rating = request.form.get("rating", 5)
     if movie_id and movie_id.isdigit():
+        try:
+            rating = float(rating)
+        except (TypeError, ValueError):
+            rating = 5.0
+        rating = min(max(rating, 0.5), 5.0)
         movie_id = int(movie_id)
-        rating = float(rating)
-        
+
         conn = get_db_conn()
         conn.execute("DELETE FROM ratings WHERE user_id = ? AND movie_id = ?", (user_id, movie_id))
         conn.execute("INSERT INTO ratings (user_id, movie_id, rating) VALUES (?, ?, ?)", (user_id, movie_id, rating))
@@ -338,4 +357,5 @@ def api_search():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(debug=debug, port=5000)

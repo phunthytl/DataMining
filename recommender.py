@@ -25,7 +25,6 @@ def load_movies() -> pd.DataFrame:
     movies["avg_rating"]  = movies.get("avg_rating",   pd.Series(dtype=float)).fillna(0.0)
     movies["num_ratings"] = movies.get("num_ratings",  pd.Series(dtype=int)).fillna(0)
     return movies
-    return movies
 
 
 def load_liked_ratings() -> pd.DataFrame:
@@ -87,8 +86,6 @@ def predict_cluster_from_seed(seed_movie_ids: list[int]) -> int:
 
 def recommend_from_seed(seed_movie_ids: list[int], top_k: int = 12, use_penalty: bool = True) -> pd.DataFrame:
     cluster_id = predict_cluster_from_seed(seed_movie_ids)
-    print(f"DEBUG: Predicted Cluster -> {cluster_id}")
-    
     movies = load_movies()
     seen = set(map(int, seed_movie_ids))
     
@@ -112,7 +109,6 @@ def recommend_from_seed(seed_movie_ids: list[int], top_k: int = 12, use_penalty:
 
     # Fallback 1: Nếu cụm không có dữ liệu, dùng mô hình chung (cluster 0)
     if not scores and cluster_id != 0:
-        print("DEBUG: No rules found in cluster. Fallback to cluster 0")
         artifact_0 = load_cluster_model(0)
         scores = get_scores(artifact_0.get("recommendation_index", {}))
 

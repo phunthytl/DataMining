@@ -62,7 +62,6 @@ def evaluate_strategy(test_users, liked, total_items, k_list, use_penalty):
             metrics[k]['precision'].append(hits / k if k > 0 else 0)
             metrics[k]['recall'].append(hits / len(target_movies))
             
-    # Calculate final metrics
     results = {}
     for k in k_list:
         results[k] = {

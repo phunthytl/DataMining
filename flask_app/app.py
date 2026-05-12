@@ -176,11 +176,12 @@ def home():
     try:
         from recommender import recommend_from_seed, user_history_seed, popular_movies, predict_cluster_from_seed
 
-        seed = user_history_seed(user_id, limit=10)
+        cluster_seed = user_history_seed(user_id, limit=None)
+        recommend_seed = user_history_seed(user_id, limit=10)
 
-        if seed:
-            cluster_id = predict_cluster_from_seed(seed)
-            recs_df    = recommend_from_seed(seed, top_k=rec_limit, use_penalty=True)
+        if recommend_seed:
+            cluster_id = predict_cluster_from_seed(cluster_seed)
+            recs_df    = recommend_from_seed(recommend_seed, top_k=rec_limit, use_penalty=True)
             if not recs_df.empty:
                 recs            = recs_df.to_dict("records")
                 is_personalized = True

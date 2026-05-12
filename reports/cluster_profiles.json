@@ -1,0 +1,196 @@
+{
+  "description": "Cluster profiles derived from the saved K-Means centroids; generated without retraining.",
+  "cluster_count": 4,
+  "source_model": "model/kmeans_model.joblib",
+  "source_genres": "model/genre_columns.joblib",
+  "profiles": [
+    {
+      "cluster_id": 0,
+      "display_name": "Cụm 1",
+      "user_count": 779,
+      "top_genres": [
+        {
+          "genre": "Comedy",
+          "weight": 0.355726,
+          "percent": 35.57
+        },
+        {
+          "genre": "Drama",
+          "weight": 0.164619,
+          "percent": 16.46
+        },
+        {
+          "genre": "Romance",
+          "weight": 0.11426,
+          "percent": 11.43
+        },
+        {
+          "genre": "Action",
+          "weight": 0.053144,
+          "percent": 5.31
+        },
+        {
+          "genre": "Thriller",
+          "weight": 0.045906,
+          "percent": 4.59
+        },
+        {
+          "genre": "Children's",
+          "weight": 0.038828,
+          "percent": 3.88
+        },
+        {
+          "genre": "Adventure",
+          "weight": 0.032727,
+          "percent": 3.27
+        },
+        {
+          "genre": "Animation",
+          "weight": 0.031057,
+          "percent": 3.11
+        }
+      ]
+    },
+    {
+      "cluster_id": 1,
+      "display_name": "Cụm 2",
+      "user_count": 2496,
+      "top_genres": [
+        {
+          "genre": "Drama",
+          "weight": 0.179319,
+          "percent": 17.93
+        },
+        {
+          "genre": "Comedy",
+          "weight": 0.159943,
+          "percent": 15.99
+        },
+        {
+          "genre": "Action",
+          "weight": 0.108522,
+          "percent": 10.85
+        },
+        {
+          "genre": "Thriller",
+          "weight": 0.097218,
+          "percent": 9.72
+        },
+        {
+          "genre": "Romance",
+          "weight": 0.066536,
+          "percent": 6.65
+        },
+        {
+          "genre": "Sci-Fi",
+          "weight": 0.061837,
+          "percent": 6.18
+        },
+        {
+          "genre": "Adventure",
+          "weight": 0.055899,
+          "percent": 5.59
+        },
+        {
+          "genre": "Crime",
+          "weight": 0.043049,
+          "percent": 4.3
+        }
+      ]
+    },
+    {
+      "cluster_id": 2,
+      "display_name": "Cụm 3",
+      "user_count": 1361,
+      "top_genres": [
+        {
+          "genre": "Drama",
+          "weight": 0.346515,
+          "percent": 34.65
+        },
+        {
+          "genre": "Comedy",
+          "weight": 0.148087,
+          "percent": 14.81
+        },
+        {
+          "genre": "Romance",
+          "weight": 0.084604,
+          "percent": 8.46
+        },
+        {
+          "genre": "Thriller",
+          "weight": 0.080708,
+          "percent": 8.07
+        },
+        {
+          "genre": "Action",
+          "weight": 0.063125,
+          "percent": 6.31
+        },
+        {
+          "genre": "War",
+          "weight": 0.053095,
+          "percent": 5.31
+        },
+        {
+          "genre": "Crime",
+          "weight": 0.050675,
+          "percent": 5.07
+        },
+        {
+          "genre": "Sci-Fi",
+          "weight": 0.028252,
+          "percent": 2.83
+        }
+      ]
+    },
+    {
+      "cluster_id": 3,
+      "display_name": "Cụm 4",
+      "user_count": 1403,
+      "top_genres": [
+        {
+          "genre": "Action",
+          "weight": 0.202137,
+          "percent": 20.21
+        },
+        {
+          "genre": "Sci-Fi",
+          "weight": 0.134479,
+          "percent": 13.45
+        },
+        {
+          "genre": "Thriller",
+          "weight": 0.116259,
+          "percent": 11.63
+        },
+        {
+          "genre": "Drama",
+          "weight": 0.103579,
+          "percent": 10.36
+        },
+        {
+          "genre": "Adventure",
+          "weight": 0.097287,
+          "percent": 9.73
+        },
+        {
+          "genre": "Comedy",
+          "weight": 0.085334,
+          "percent": 8.53
+        },
+        {
+          "genre": "Horror",
+          "weight": 0.045496,
+          "percent": 4.55
+        },
+        {
+          "genre": "War",
+          "weight": 0.042138,
+          "percent": 4.21
+        }
+      ]
+    }
+  ]
+}

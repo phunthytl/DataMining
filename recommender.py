@@ -88,6 +88,8 @@ def recommend_from_seed(seed_movie_ids: list[int], top_k: int = 12, use_penalty:
     cluster_id = predict_cluster_from_seed(seed_movie_ids)
     movies = load_movies()
     seen = set(map(int, seed_movie_ids))
+    liked = load_liked_ratings()
+    movie_popularity = liked["movie_id"].astype(int).value_counts().to_dict()
     
     def get_scores(idx_dict):
         scores_dict = defaultdict(lambda: {"score": 0.0, "confidence": 0.0, "lift": 0.0, "support_count": 0, "matched_from": []})
@@ -117,9 +119,10 @@ def recommend_from_seed(seed_movie_ids: list[int], top_k: int = 12, use_penalty:
 
     rows = []
     for movie_id, info in scores.items():
-        penalty_factor = math.log10(info["support_count"] + 10) if use_penalty else 1.0
+        target_popularity = movie_popularity.get(movie_id, 0)
+        penalty_factor = math.log10(target_popularity + 10) if use_penalty else 1.0
         normalized_score = info["score"] / penalty_factor
-        rows.append({"movie_id": movie_id, **info, "normalized_score": normalized_score, "matched_from": sorted(set(info["matched_from"]))})
+        rows.append({"movie_id": movie_id, **info, "target_popularity": target_popularity, "normalized_score": normalized_score, "matched_from": sorted(set(info["matched_from"]))})
     
     score_df = pd.DataFrame(rows).sort_values(["normalized_score", "score", "lift", "confidence", "support_count"], ascending=False)
     recs = score_df.head(top_k).merge(movies, on="movie_id", how="left")
